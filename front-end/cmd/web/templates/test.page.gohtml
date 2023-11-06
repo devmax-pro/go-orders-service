@@ -1,0 +1,79 @@
+{{template "base" .}}
+
+{{define "content" }}
+    <div id="app" class="container">
+        <div class="row">
+            <div class="col">
+                <h4 class="mb-3">Проверить заказ</h4>
+            </div>
+            <div class="col">
+                <h4 class="mb-3">Отправить заказ</h4>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <form @submit.prevent="getOrder">
+                        <div class="mb-3">
+                            <input type="text" class="form-control" v-model="orderId" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Получить</button>
+                    </form>
+                </div>
+                <div class="col">
+                    <button type="button" class="btn btn-secondary" @click="postOrder">Отправить</button>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <h5 class="mt-5">Result</h5>
+                    <div class="mt-1" style="outline: 1px solid silver; padding: 2em;">
+                        <pre id="received-get"><span class="text-muted">${ result_get }$</span></pre>
+                    </div>
+                </div>
+                <div class="col">
+                    <h5 class="mt-5">Result:</h5>
+                    <div class="mt-1" style="outline: 1px solid silver; padding: 2em;">
+                        <pre id="received-post"><span class="text-muted">${ result_post }$</span></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{{end}}
+
+{{define "js"}}
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    orderId: '',
+                    result_get: '',
+                    result_post: ''
+                }
+            },
+            methods: {
+                async getOrder() {
+                    try {
+                        const response = await axios.get({{.OrderServiceURL}} +`/order/${this.orderId}`);
+                        this.result_get = JSON.stringify(response.data, null, 2);
+                    } catch (error) {
+                        this.result_get = 'Произошла ошибка при получении данных о заказе.';
+                    }
+                },
+                async postOrder() {
+                    try {
+                        const response = await axios.post('/send-order', {});
+                        this.result_post = JSON.stringify(response.data, null, 2);
+                    } catch (error) {
+                        this.result_post = 'Произошла ошибка при отправке данных о заказе.';
+                    }
+                }
+            },
+            delimiters: ["${", "}$"],
+            compilerOptions: {
+                delimiters: ["${", "}$"]
+            }
+        });
+
+        app.mount('#app');
+    </script>
+{{end}}

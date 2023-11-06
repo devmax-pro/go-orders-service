@@ -1,0 +1,60 @@
+version: '3.9'
+services:
+  postgres:
+    container_name: postgres
+    image: postgres
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./order-service/sql/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    environment:
+      POSTGRES_USER: 'username'
+      POSTGRES_PASSWORD: 'secret'
+      POSTGRES_DB: 'order_service_db'
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: "nats-streaming:0.25-alpine"
+    command:
+      - "--cluster_id"
+      - orders-streaming
+      - "--dir"
+      - /data/msg
+      - "--store"
+      - file
+    volumes:
+      - nats-data:/data
+
+  front-end:
+    build:
+      context: ./front-end
+    environment:
+      NATS_URL: 'nats:4222'
+    ports:
+      - "8081:8081"
+    depends_on:
+      - nats
+      - order-service
+
+  order-service:
+    build:
+      context: ./order-service
+    environment:
+      DB_SOURCE: 'postgres://username:secret@postgres:5432/order_service_db?sslmode=disable'
+      NATS_URL: 'nats:4222'
+    ports:
+      - "8080:8080"
+    depends_on:
+      nats:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pg-data:
+  nats-data:
